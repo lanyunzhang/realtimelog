@@ -12,10 +12,10 @@ function drawChart() {
             ]);
 
     var options = {
-title: Company Performance
+title: "Real Time Statistic"
     };
 
-    var chart = new google.visualization.LineChart(document.getElementById(chart_div));
+    var chart = new google.visualization.LineChart(document.getElementById("chart_div"));
     chart.draw(data, options);
 }
 </script>
