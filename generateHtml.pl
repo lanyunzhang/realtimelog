@@ -40,11 +40,11 @@ my $value = undef;
 
 for my $key (@keys){
 
-    my @field =qw/all add del mod news quick other timeliness/;
+    my @field =qw/all add del mod news quick timeliness other/;
     #my @value =($ALL,$ADD,$DEL,$MOD,$NEWS,$QUICK,$OTHER,$TIMELINESS);
     my $i = 0;
-    $line =$line."[";
-    while($i < $#field){
+    $line =$line."[ \"$key\",";
+    while($i <= $#field){
         $value = $r->hget($key,$field[$i]);
         $line = $line."$value,";
         $i = $i + 1;
@@ -54,7 +54,7 @@ for my $key (@keys){
 }
 
 my $data = '[
-              ["Time", "All", "Add","Del","Mod","News","Quick","Other","Timeliness"],'
+              ["Time", "All", "Add","Del","Mod","News","Quick","Timeliness","Other"],'
                 ."\n$line".' 
             ]';
 my $htmldata='<html>

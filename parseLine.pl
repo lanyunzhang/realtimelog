@@ -105,7 +105,7 @@ sub sendData
     my @value =($ALL,$ADD,$DEL,$MOD,$NEWS,$QUICK,$OTHER,$TIMELINESS);
 
     my $i=0;
-    while($i<$#value){
+    while($i <= $#value){
         hincrby($r,$key,$field[$i],$value[$i]);
         $i++;
     }
