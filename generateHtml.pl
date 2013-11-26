@@ -35,7 +35,7 @@ if($r == 236 ){
     return;
 }
 my @keys = $r->keys("log-$year$mon$mday*");
-my $line = undef;
+my $line = "";
 my $value = undef;
 
 for my $key (@keys){
@@ -43,13 +43,14 @@ for my $key (@keys){
     my @field =qw/all add del mod news quick timeliness other/;
     #my @value =($ALL,$ADD,$DEL,$MOD,$NEWS,$QUICK,$OTHER,$TIMELINESS);
     my $i = 0;
-    $line =$line."[ \"$key\",";
+    my $addline ="[ \"$key\",";
     while($i <= $#field){
         $value = $r->hget($key,$field[$i]);
-        $line = $line."$value,";
+        $addline = $addline."$value,";
         $i = $i + 1;
     }
-    $line = $line."],\n";
+    $addline = $addline."],\n";
+    $line = $addline.$line;
 
 }
 
@@ -67,10 +68,10 @@ function drawChart() {
     var data = google.visualization.arrayToDataTable('.$data.');
 
     var options = {
-title: '."Company Performance".'
+title: '."\"Real Time Statistic\"".'
     };
 
-    var chart = new google.visualization.LineChart(document.getElementById('."chart_div".'));
+    var chart = new google.visualization.LineChart(document.getElementById('."\"chart_div\"".'));
     chart.draw(data, options);
 }
 </script>

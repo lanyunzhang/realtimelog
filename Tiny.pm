@@ -1,9 +1,9 @@
-package Try::Tiny;
+package Tiny;
 BEGIN {
-  $Try::Tiny::AUTHORITY = 'cpan:NUFFIN';
+  $Tiny::AUTHORITY = 'cpan:NUFFIN';
 }
 {
-  $Try::Tiny::VERSION = '0.18';
+  $Tiny::VERSION = '0.18';
 }
 use 5.006;
 # ABSTRACT: minimal try/catch with proper preservation of $@
@@ -38,11 +38,11 @@ sub try (&;@) {
   # catch and finally tag the blocks by blessing a scalar reference to them.
   foreach my $code_ref (@code_refs) {
 
-    if ( ref($code_ref) eq 'Try::Tiny::Catch' ) {
+    if ( ref($code_ref) eq 'Tiny::Catch' ) {
       croak 'A try() may not be followed by multiple catch() blocks'
         if $catch;
       $catch = ${$code_ref};
-    } elsif ( ref($code_ref) eq 'Try::Tiny::Finally' ) {
+    } elsif ( ref($code_ref) eq 'Tiny::Finally' ) {
       push @finally, ${$code_ref};
     } else {
       croak(
@@ -92,7 +92,7 @@ sub try (&;@) {
 
   # set up a scope guard to invoke the finally block at the end
   my @guards =
-    map { Try::Tiny::ScopeGuard->_new($_, $failed ? $error : ()) }
+    map { Tiny::ScopeGuard->_new($_, $failed ? $error : ()) }
     @finally;
 
   # at this point $failed contains a true value if the eval died, even if some
@@ -123,7 +123,7 @@ sub catch (&;@) {
   croak 'Useless bare catch()' unless wantarray;
 
   return (
-    bless(\$block, 'Try::Tiny::Catch'),
+    bless(\$block, 'Tiny::Catch'),
     @rest,
   );
 }
@@ -134,14 +134,14 @@ sub finally (&;@) {
   croak 'Useless bare finally()' unless wantarray;
 
   return (
-    bless(\$block, 'Try::Tiny::Finally'),
+    bless(\$block, 'Tiny::Finally'),
     @rest,
   );
 }
 
 {
   package # hide from PAUSE
-    Try::Tiny::ScopeGuard;
+    Tiny::ScopeGuard;
 
   use constant UNSTABLE_DOLLARAT => ($] < '5.013002') ? 1 : 0;
 
@@ -178,7 +178,7 @@ __END__
 
 =head1 NAME
 
-Try::Tiny - minimal try/catch with proper preservation of $@
+Tiny - minimal try/catch with proper preservation of $@
 
 =head1 VERSION
 
@@ -186,7 +186,7 @@ version 0.18
 
 =head1 SYNOPSIS
 
-You can use Try::Tiny's C<try> and C<catch> to expect and handle exceptional
+You can use Tiny's C<try> and C<catch> to expect and handle exceptional
 conditions, avoiding quirks in Perl and common mistakes:
 
   # handle errors with a catch handler
@@ -282,7 +282,7 @@ Once all execution is finished then the C<finally> block, if given, will execute
 Intended to be used in the second argument position of C<try>.
 
 Returns a reference to the subroutine it was given but blessed as
-C<Try::Tiny::Catch> which allows try to decode correctly what to do
+C<Tiny::Catch> which allows try to decode correctly what to do
 with this code reference.
 
   catch { ... }
@@ -337,17 +337,17 @@ the following code does just what you would expect:
     }
   };
 
-B<You must always do your own error handling in the C<finally> block>. C<Try::Tiny> will
+B<You must always do your own error handling in the C<finally> block>. C<Tiny> will
 not do anything about handling possible errors coming from code located in these
 blocks.
 
 Furthermore B<exceptions in C<finally> blocks are not trappable and are unable
 to influence the execution of your program>. This is due to limitation of
 C<DESTROY>-based scope guards, which C<finally> is implemented on top of. This
-may change in a future version of Try::Tiny.
+may change in a future version of Tiny.
 
 In the same way C<catch()> blesses the code reference this subroutine does the same
-except it bless them as C<Try::Tiny::Finally>.
+except it bless them as C<Tiny::Finally>.
 
 =back
 

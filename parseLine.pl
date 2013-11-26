@@ -2,7 +2,7 @@
 #
 
 BEGIN{
-    push @INC,".";
+    unshift @INC,".";
 }
 
 use strict;
@@ -14,125 +14,109 @@ use Pod::Usage;
 
 my $HOST="127.0.0.1";
 my $PORT="6380";
+my $PRODUCT=undef;
 
 my $help = 0;
 my $man = 0;
-my $threshold = 1000000;
+my $psn = 1000;
 
 GetOptions(
         'host=s' => \$HOST,
         'port=i' => \$PORT,
-        'threshold=i' => \$threshold,
+        'product=s' => \$PRODUCT,
+        'per-send-num=i' => \$psn,
         'help|?' => \$help, 
         'man' => \$man
         );
 pod2usage(1) if $help;
 pod2usage(-exitval => 0, -verbose => 2) if $man;
 
-my $ALL=0;
-my $ADD=0;
-my $DEL=0;
-my $MOD=0;
-my $NEWS=0;
-my $QUICK=0;
-my $OTHER=0;
-my $TIMELINESS=0;
+defined($PRODUCT) or die "No product input." ;
 
+my $N_ALL=0;
+my $N_ADD=0;
+my $N_DEL=0;
+my $N_MOD=0;
+my $N_NEWS=0;
+my $N_FAST=0;
+my $N_OTHER=0;
+my $N_FRESH=0;
 
-my $start = time();
-my $date= getTime();
-my $lasthour = $date->{hour};
+my $lastymdh = getTime()->{ymdh};
 
 while(<STDIN>){
-    $ALL++;
-    if($ALL % $threshold == 0 ){
-        sendData($HOST,$PORT);
-    }
-    my $curhour = $date->{hour};
-    if( $curhour!= $lasthour ){
-        $lasthour = $curhour;
-        sendData($HOST,$PORT);
+    print $_;
+    s/^\s+//g;
+    s/\s+$//g;
+
+    $N_ALL++;
+
+    my $curymdh = getTime()->{ymdh};
+    if( $curymdh != $lastymdh){
+        sendData($HOST,$PORT,$lastymdh);
+        $lastymdh = $curymdh;
+    }elsif($N_ALL == $psn ){
+        sendData($HOST,$PORT,$curymdh);
     }
 
     my $line = $_;
-    if($line =~ /<flag:1>/){ 
-        $MOD++;
-    }elsif($line =~ /<flag:2>/){
-        $DEL++;
-    }elsif($line =~ /<flag:0>/){
-        $ADD++;
+    if($line =~ /^<flag:1>/){ 
+        $N_MOD++;
+    }elsif($line =~ /^<flag:2>/){
+        $N_DEL++;
+    }elsif($line =~ /^<flag:0>/){
+        $N_ADD++;
         if($line =~ /><fresh:/){
-            $TIMELINESS++;
+            $N_FRESH++;
         }elsif($line =~ /><tag:/){
-            $NEWS++;
+            $N_NEWS++;
         }else{
-            $QUICK++;
+            $N_FAST++;
         }
     }else{
-        $OTHER++;
+        $N_OTHER++;
     }
 
 }
-sendData($HOST,$PORT);
-
-my $end = time();
-my $last = $end - $start;
-
-#print "ALL is $ALL\n";
-#print "ADD is $ADD\n";
-#print "DEL is $DEL\n";
-#print "MOD is $MOD\n";
-#print "NEWS is $NEWS\n";
-#print "QUICK is $QUICK\n";
-#print "TIMELINESS is $TIMELINESS\n";
-#print "OTHER is $OTHER\n";
-#print "Spend time is  $last\n";
+sendData($HOST,$PORT,$lastymdh);
 
 
 # send data to redis  
+# handle hincrby failed case.
 sub sendData
 {
-    print "send...\n";
-    # what if the server is not services ? how to handling the error!
+    print STDERR "send...\n";
     my $r = Redis->new(server =>"$HOST:$PORT",debug => 0 ); 
     if($r == 236 ){
-        print "can't connect to server!\n";
+        print STDERR "can't connect to server!\n";
         return;
     }
     my $ymdh = getTime()->{ymdh};
-    my $key = "log-$ymdh";
-    my @field =qw/all add del mod news quick other timeliness/;
-    my @value =($ALL,$ADD,$DEL,$MOD,$NEWS,$QUICK,$OTHER,$TIMELINESS);
+    my $key = "$PRODUCT-$ymdh";
+    my @field =qw/all add del mod news fast other fresh/;
+    my @value =(\$N_ALL,\$N_ADD,\$N_DEL,\$N_MOD,\$N_NEWS,\$N_FAST,\$N_OTHER,\$N_FRESH);
 
     my $i=0;
     while($i <= $#value){
-        hincrby($r,$key,$field[$i],$value[$i]);
+        my $valueRef = $value[$i];
+        my $code = $r->hincrby($key,$field[$i] => $$valueRef);
+        $$valueRef = 0 if defined $code;
         $i++;
     }
-    clearCount();
 
 }
 
-sub hincrby
-{
-    my ($r,$key,$field,$value) = @_; 
-    if ( !$r->hexists($key,$field) ){
-        $r->hset($key,$field => 0);
-    }
 
-    $r->hincrby($key,$field => $value);
-}
-
-sub clearCount
+sub printCount
 {
-    $ALL=0;
-    $ADD=0;
-    $DEL=0;
-    $MOD=0;
-    $NEWS=0;
-    $QUICK=0;
-    $OTHER=0;
-    $TIMELINESS=0;
+    print "$N_ALL\n";
+    print "$N_ADD\n";
+    print "$N_DEL\n";
+    print "$N_MOD\n";
+    print "$N_NEWS\n";
+    print "$N_FAST\n";
+    print "$N_OTHER\n";
+    print "$N_FRESH\n";
 
 }
 
@@ -183,7 +167,9 @@ Options:
 
 -port            the port that redis server using 
 
--threshold       instructions add to the threshold then send to redis server one time 
+-product         the product name for statistic
+
+-per-send-num    instructions add to the threshold then send to redis server one time 
 
 -help            brief help message
 
@@ -203,7 +189,11 @@ hostname or ip address on redis server machine.
 
 the port that  redis server using.
 
-=item B<-threshold>
+=item B<-product>
+
+the product name for statistic
+
+=item B<-per-send-num>
 
 instructions add to the threshold then send to redis server one time 
 

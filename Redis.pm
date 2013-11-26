@@ -115,10 +115,9 @@ sub DESTROY { }
 our $AUTOLOAD;
 
 sub AUTOLOAD {
-  my $command = $AUTOLOAD;
+  my $command = $AUTOLOAD; # $command is Redis::hincrby
   $command =~ s/.*://;
-
-  my $method = sub { shift->__std_cmd($command, @_) };
+  my $method = sub {    shift->__std_cmd($command, @_) };
 
   # Save this method for future calls
   no strict 'refs';
@@ -173,7 +172,7 @@ sub __with_reconnect {
 
 sub __run_cmd {
   my ($self, $command, $collect_errors, $custom_decode, $cb, @args) = @_;
-
+  #print STDERR "$cb\n";
   my $ret;
   my $wrapper = $cb && $custom_decode
     ? sub {
@@ -182,7 +181,10 @@ sub __run_cmd {
     }
     : $cb || sub {
       my ($reply, $error) = @_;
-      confess "[$command] $error, " if defined $error;
+      #confess "[$command] $error, " if defined $error;
+      if( defined($error) ){
+         print STDERR "[$command] $error\n";
+      }
       $ret = $reply;
     };
 
