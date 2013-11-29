@@ -21,8 +21,8 @@ my $TIMELINESS=0;
 my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time());
 $year += 1900;
 $mon  += 1;
-my $curTime="$year$mon$mday$hour";
-
+my $curTime="$year$mon$mday";
+$curTime=$ARGV[0] if defined($ARGV[0]) ;
 my $htmlfile = "googchart.html";
 my $successlog= open(my $html,'>',$htmlfile);
 
@@ -34,13 +34,14 @@ if($r == 236 ){
     print "can't connect to server!\n";
     return;
 }
-my @keys = $r->keys("log-$year$mon$mday*");
+my @keys = $r->keys("qss-$curTime*");
+@keys = sort {$b cmp $a} @keys;
 my $line = "";
 my $value = undef;
 
 for my $key (@keys){
 
-    my @field =qw/all add del mod news quick timeliness other/;
+    my @field =qw/all add del mod news fast fresh other/;
     #my @value =($ALL,$ADD,$DEL,$MOD,$NEWS,$QUICK,$OTHER,$TIMELINESS);
     my $i = 0;
     my $addline ="[ \"$key\",";
@@ -55,7 +56,7 @@ for my $key (@keys){
 }
 
 my $data = '[
-              ["Time", "All", "Add","Del","Mod","News","Quick","Timeliness","Other"],'
+              ["Time", "All", "Add","Del","Mod","News","Fast","Fresh","Other"],'
                 ."\n$line".' 
             ]';
 my $htmldata='<html>

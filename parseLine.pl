@@ -7,6 +7,7 @@ BEGIN{
 
 use strict;
 use warnings;
+use Try;
 use Redis;
 use Getopt::Long;
 use Pod::Usage;
@@ -15,6 +16,8 @@ use Pod::Usage;
 my $HOST="127.0.0.1";
 my $PORT="6380";
 my $PRODUCT=undef;
+my $reconnect = 10;
+my $every = 3000;
 
 my $help = 0;
 my $man = 0;
@@ -24,8 +27,10 @@ GetOptions(
         'host=s' => \$HOST,
         'port=i' => \$PORT,
         'product=s' => \$PRODUCT,
-        'per-send-num=i' => \$psn,
-        'help|?' => \$help, 
+        'send-per-num=i' => \$psn,
+        'total-time-for-reconnect=i' => \$reconnect,
+        'every-reconnect-time=i'     => \$every,
+        'h|help|?' => \$help, 
         'man' => \$man
         );
 pod2usage(1) if $help;
@@ -41,23 +46,19 @@ my $N_NEWS=0;
 my $N_FAST=0;
 my $N_OTHER=0;
 my $N_FRESH=0;
+my $N_BLOCK=0;
 
 my $lastymdh = getTime()->{ymdh};
+my $redis = undef;
 
 while(<STDIN>){
-    print $_;
+   # print $_;
     s/^\s+//g;
     s/\s+$//g;
-
+    next unless $_;
+    
     $N_ALL++;
-
-    my $curymdh = getTime()->{ymdh};
-    if( $curymdh != $lastymdh){
-        sendData($HOST,$PORT,$lastymdh);
-        $lastymdh = $curymdh;
-    }elsif($N_ALL == $psn ){
-        sendData($HOST,$PORT,$curymdh);
-    }
+    $N_BLOCK++;
 
     my $line = $_;
     if($line =~ /^<flag:1>/){ 
@@ -77,21 +78,44 @@ while(<STDIN>){
         $N_OTHER++;
     }
 
+    my $curymdh = getTime()->{ymdh};
+    if( $curymdh != $lastymdh){
+        sendData($lastymdh);
+        $lastymdh = $curymdh;
+
+    }elsif($N_BLOCK< $psn ){
+        next;
+    }elsif($N_BLOCK== $psn ){
+        sendData($curymdh);
+    }elsif($N_BLOCK > $psn ){
+
+        $N_BLOCK = $N_BLOCK -  $psn; 
+    }
+
 }
-sendData($HOST,$PORT,$lastymdh);
+sendData($lastymdh);
 
 
 # send data to redis  
-# handle hincrby failed case.
 sub sendData
 {
-    print STDERR "send...\n";
-    my $r = Redis->new(server =>"$HOST:$PORT",debug => 0 ); 
-    if($r == 236 ){
-        print STDERR "can't connect to server!\n";
-        return;
+    my $rc = 0;
+    my $ymdh = $_[0];
+    print STDERR "Send Data  ymdh=$ymdh\n";
+    if ( ( !defined($redis) ) || !$redis->ping ){
+        print STDERR "New Redis server HOST=$HOST,PORT=$PORT,RECONNECT=$reconnect,EVERY=$every\n";
+        try{
+            # reconnect every 5000ms ,up to 300s 
+            $redis = Redis->new(server =>"$HOST:$PORT",debug => 0,reconnect => $reconnect,every => $every); 
+
+        }catch{
+           print STDERR "Can't connect to server.!\n";   
+           $rc = -1;
+        }
     }
-    my $ymdh = getTime()->{ymdh};
+    return if $rc == -1;
+    
+
     my $key = "$PRODUCT-$ymdh";
     my @field =qw/all add del mod news fast other fresh/;
     my @value =(\$N_ALL,\$N_ADD,\$N_DEL,\$N_MOD,\$N_NEWS,\$N_FAST,\$N_OTHER,\$N_FRESH);
@@ -99,8 +123,15 @@ sub sendData
     my $i=0;
     while($i <= $#value){
         my $valueRef = $value[$i];
-        my $code = $r->hincrby($key,$field[$i] => $$valueRef);
-        $$valueRef = 0 if defined $code;
+        try{
+            $redis->hincrby($key,$field[$i] => $$valueRef); # blocking?
+        }catch{
+            print STDERR "Run hincrby Command failed!\n";
+            $rc = -1;
+        };
+        return if $rc == -1;
+        $N_BLOCK = 0 if $i == 0 ;
+        $$valueRef = 0;
         $i++;
     }
 
@@ -169,7 +200,11 @@ Options:
 
 -product         the product name for statistic
 
--per-send-num    instructions add to the threshold then send to redis server one time 
+-total-time-for-reconnect       reconnect to server up to $reconnct seconds
+
+-every-reconnect-time           $every milliseconds  to reconnct server one time.
+
+-send-per-num    instructions add to the threshold then send to redis server one time 
 
 -help            brief help message
 
@@ -193,7 +228,15 @@ the port that  redis server using.
 
 the product name for statistic
 
-=item B<-per-send-num>
+=item B<-total-time-for-reconnect>
+
+reconnect to server up to total time seconds
+
+=item B<-every-reconnect-time>
+
+every-reconnect-time  milliseconds  to reconnct server one time.
+
+=item B<-send-per-num>
 
 instructions add to the threshold then send to redis server one time 
 

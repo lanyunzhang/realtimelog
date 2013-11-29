@@ -28,7 +28,7 @@ use Errno ();
 use Data::Dumper;
 use Carp qw/confess/;
 use Encode;
-use Tiny; # use Try::Tiny;
+use Try;
 use Scalar::Util ();
 
 use constant WIN32       => $^O =~ /mswin32/i;
@@ -95,13 +95,9 @@ sub new {
   $self->{reconnect}     = $args{reconnect} || 0;
   $self->{every}         = $args{every} || 1000;
 
-  my $code = $self->__connect;
+  $self->__connect;
 
-  if( defined($code) && $code == 236 ){
-    return 236;
-  }else{
-      return $self;
-  }
+  return $self;
 }
 
 sub is_subscriber { $_[0]{is_subscriber} }
@@ -115,9 +111,10 @@ sub DESTROY { }
 our $AUTOLOAD;
 
 sub AUTOLOAD {
-  my $command = $AUTOLOAD; # $command is Redis::hincrby
+  my $command = $AUTOLOAD;
   $command =~ s/.*://;
-  my $method = sub {    shift->__std_cmd($command, @_) };
+
+  my $method = sub { shift->__std_cmd($command, @_) };
 
   # Save this method for future calls
   no strict 'refs';
@@ -172,7 +169,7 @@ sub __with_reconnect {
 
 sub __run_cmd {
   my ($self, $command, $collect_errors, $custom_decode, $cb, @args) = @_;
-  #print STDERR "$cb\n";
+
   my $ret;
   my $wrapper = $cb && $custom_decode
     ? sub {
@@ -181,10 +178,7 @@ sub __run_cmd {
     }
     : $cb || sub {
       my ($reply, $error) = @_;
-      #confess "[$command] $error, " if defined $error;
-      if( defined($error) ){
-         print STDERR "[$command] $error\n";
-      }
+      confess "[$command] $error, " if defined $error;
       $ret = $reply;
     };
 
@@ -493,8 +487,7 @@ sub __build_sock {
   my ($self) = @_;
 
   $self->{sock} = $self->{builder}->($self)
-    || return 236;
-    #|| confess("Could not connect to Redis server at $self->{server}: $!");
+    || confess("Could not connect to Redis server at $self->{server}: $!");
 
   if (exists $self->{password}) {
     try { $self->auth($self->{password}) }
