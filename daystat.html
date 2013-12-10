@@ -1,0 +1,60 @@
+<html>
+<head>
+<script type="text/javascript" src="https://www.google.com/jsapi"></script>
+<script type="text/javascript">
+google.load("visualization", "1", {packages:["corechart"]});
+google.load("visualization", "1", {packages:["table"]});
+google.setOnLoadCallback(drawChart);
+google.setOnLoadCallback(drawTable);
+function drawChart() {
+    var dldata = google.visualization.arrayToDataTable([
+              ["Time", "All", "Add","Del","Mod","News","Fast","Fresh","Other"],
+[ "20131209",97287357,97420950,57291,0,660676,40572033,55997357,0,],
+[ "20131204",320947681,320811438,136243,0,1760606,107478782,211572050,0,],
+[ "20131203",70576765,70550223,26542,0,313383,20516513,49720327,0,],
+[ "20131202",114381866,114289460,92406,0,578503,49965203,63745754,0,],
+[ "20131130",74639457,4639457,64639457,63563,638634,638634,645,0,],
+[ "20131129",98374453,98308945,65508,0,696901,47468172,50143872,0,],
+ 
+            ]);
+
+    var options = {
+	title: "Last 7 days Statistic"
+    };
+
+    var chart = new google.visualization.LineChart(document.getElementById("chart_div"));
+    chart.draw(dldata, options);
+
+}
+
+function drawTable() {
+	var data = new google.visualization.DataTable();
+	data.addColumn('string','Date');
+	data.addColumn('number', 'All');
+	data.addColumn('number', 'Add');
+	data.addColumn('number', 'Del');
+	data.addColumn('number', 'Mod');
+	data.addColumn('number', 'News');
+	data.addColumn('number', 'Fast');
+	data.addColumn('number', 'Fresh');
+	data.addColumn('number', 'Other');
+	data.addRows([
+[ "20131209",{v:97287357,f:'97287357'},{v:97420950,f:'97420950'},{v:57291,f:'57291'},{v:0,f:'0'},{v:660676,f:'660676'},{v:40572033,f:'40572033'},{v:55997357,f:'55997357'},{v:0,f:'0'},],
+[ "20131204",{v:320947681,f:'320947681'},{v:320811438,f:'320811438'},{v:136243,f:'136243'},{v:0,f:'0'},{v:1760606,f:'1760606'},{v:107478782,f:'107478782'},{v:211572050,f:'211572050'},{v:0,f:'0'},],
+[ "20131203",{v:70576765,f:'70576765'},{v:70550223,f:'70550223'},{v:26542,f:'26542'},{v:0,f:'0'},{v:313383,f:'313383'},{v:20516513,f:'20516513'},{v:49720327,f:'49720327'},{v:0,f:'0'},],
+[ "20131202",{v:114381866,f:'114381866'},{v:114289460,f:'114289460'},{v:92406,f:'92406'},{v:0,f:'0'},{v:578503,f:'578503'},{v:49965203,f:'49965203'},{v:63745754,f:'63745754'},{v:0,f:'0'},],
+[ "20131130",{v:74639457,f:'74639457'},{v:4639457,f:'4639457'},{v:64639457,f:'64639457'},{v:63563,f:'63563'},{v:638634,f:'638634'},{v:638634,f:'638634'},{v:645,f:'645'},{v:0,f:'0'},],
+[ "20131129",{v:98374453,f:'98374453'},{v:98308945,f:'98308945'},{v:65508,f:'65508'},{v:0,f:'0'},{v:696901,f:'696901'},{v:47468172,f:'47468172'},{v:50143872,f:'50143872'},{v:0,f:'0'},],
+]);
+
+	var table = new google.visualization.Table(document.getElementById("table_div"));
+	table.draw(data, {showRowNumber: false});
+}
+
+</script>
+</head>
+<body>
+<div id="chart_div" style="width: 100%; height: 50%;"></div>
+<div id="table_div" style="width: 100%; height: 50%;"></div>
+</body>
+</html>

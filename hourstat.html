@@ -1,0 +1,58 @@
+<html>
+<head>
+<script type="text/javascript" src="https://www.google.com/jsapi"></script>
+<script type="text/javascript">
+google.load("visualization", "1", {packages:["corechart"]});
+google.load("visualization", "1", {packages:["table"]});
+google.setOnLoadCallback(drawChart);
+google.setOnLoadCallback(drawTable);
+function drawChart() {
+    var dldata = google.visualization.arrayToDataTable([
+              ["Time", "All", "Add","Del","Mod","News","Fast","Fresh","Other"],
+[ "qss-2013120915",7595355,7591090,4265,0,50140,3208401,4332549,0,],
+[ "qss-2013120914",21546924,21534279,12645,0,144373,9076473,12313433,0,],
+[ "qss-2013120912",25615758,25600981,14777,0,175958,10659668,14765355,0,],
+[ "qss-2013120911",42529320,42503716,25604,0,290205,17627491,24586020,0,],
+[ "qss-2013120910",,190884,,,,,,,],
+ 
+            ]);
+
+    var options = {
+	title: "Today's Data Statistic"
+    };
+
+    var chart = new google.visualization.LineChart(document.getElementById("chart_div"));
+    chart.draw(dldata, options);
+
+}
+
+function drawTable() {
+	var data = new google.visualization.DataTable();
+	data.addColumn('string','Date');
+	data.addColumn('number', 'All');
+	data.addColumn('number', 'Add');
+	data.addColumn('number', 'Del');
+	data.addColumn('number', 'Mod');
+	data.addColumn('number', 'News');
+	data.addColumn('number', 'Fast');
+	data.addColumn('number', 'Fresh');
+	data.addColumn('number', 'Other');
+	data.addRows([
+[ "qss-2013120915",{v:7595355,f:'7595355'},{v:7591090,f:'7591090'},{v:4265,f:'4265'},{v:0,f:'0'},{v:50140,f:'50140'},{v:3208401,f:'3208401'},{v:4332549,f:'4332549'},{v:0,f:'0'},],
+[ "qss-2013120914",{v:21546924,f:'21546924'},{v:21534279,f:'21534279'},{v:12645,f:'12645'},{v:0,f:'0'},{v:144373,f:'144373'},{v:9076473,f:'9076473'},{v:12313433,f:'12313433'},{v:0,f:'0'},],
+[ "qss-2013120912",{v:25615758,f:'25615758'},{v:25600981,f:'25600981'},{v:14777,f:'14777'},{v:0,f:'0'},{v:175958,f:'175958'},{v:10659668,f:'10659668'},{v:14765355,f:'14765355'},{v:0,f:'0'},],
+[ "qss-2013120911",{v:42529320,f:'42529320'},{v:42503716,f:'42503716'},{v:25604,f:'25604'},{v:0,f:'0'},{v:290205,f:'290205'},{v:17627491,f:'17627491'},{v:24586020,f:'24586020'},{v:0,f:'0'},],
+[ "qss-2013120910",{v:,f:''},{v:190884,f:'190884'},{v:,f:''},{v:,f:''},{v:,f:''},{v:,f:''},{v:,f:''},{v:,f:''},],
+]);
+
+	var table = new google.visualization.Table(document.getElementById("table_div"));
+	table.draw(data, {showRowNumber: false});
+}
+
+</script>
+</head>
+<body>
+<div id="chart_div" style="width: 100%; height: 50%;"></div>
+<div id="table_div" style="width: 100%; height: 50%;"></div>
+</body>
+</html>
