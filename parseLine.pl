@@ -12,7 +12,7 @@ use Redis;
 use Getopt::Long;
 use Pod::Usage;
 
-
+my $start = time();
 my $HOST="127.0.0.1";
 my $PORT="6380";
 my $PRODUCT=undef;
@@ -52,7 +52,7 @@ my $lastymdh = getTime()->{ymdh};
 my $redis = undef;
 
 while(<STDIN>){
-   # print $_;
+    print $_;
     s/^\s+//g;
     s/\s+$//g;
     next unless $_;
@@ -94,7 +94,9 @@ while(<STDIN>){
 
 }
 sendData($lastymdh);
-
+my $end = time();
+my $duration = $end - $start; 
+print STDERR  "The processing time is $duration.\n";
 
 # send data to redis  
 sub sendData
