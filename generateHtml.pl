@@ -2,14 +2,17 @@
 #
 
 use strict;
+use warnings;
 use Redis;
 use Getopt::Long;
 use Pod::Usage;
+use ListMoreUtils qw/uniq/;
 
 my $HOST="127.0.0.1";
 my $PORT="6380";
 my $help = 0;
 my $man = 0;
+my $product = "line2";
 
 GetOptions(
 	'host=s' =>\$HOST,
@@ -26,10 +29,10 @@ $mon  += 1;
 my $curTime= sprintf "%04d%02d%02d", $year,$mon,$mday; # the diffrent with printf
 $curTime=$ARGV[0] if defined($ARGV[0]) ;
 
-my $dayhtml = "daystat.html";
+my $dayhtml = "/home/s/apps/qss/nginx/html/counter/daystat.html";
 open(my $dayhandle,'>',$dayhtml);
 
-my $hourhtml = "hourstat.html";
+my $hourhtml = "/home/s/apps/qss/nginx/html/counter/hourstat.html";
 open(my $hourhandle,'>',$hourhtml);
 
 # provide seven days data in days and today's data in hour.
@@ -38,12 +41,12 @@ open(my $hourhandle,'>',$hourhtml);
 
 # get data from redis server 
 my $r = Redis->new(server =>"$HOST:$PORT",debug => 0 ); 
-my @keys = $r->keys("qss-$curTime*");
-my @allkeys = $r->keys("qss-*");
+my @keys = $r->keys("$product-$curTime*");
+my @allkeys = $r->keys("$product-*");
 my @days = undef;
 
 
-@keys = sort {$b cmp $a} @keys;
+@keys = sort {$a cmp $b} @keys;
 
 my $line = "";
 my $dl = "";
@@ -52,19 +55,19 @@ my $rowdata = "";
 my $value = undef;
 
 for my $key (@allkeys){
-    my $value = substr($key,4,8); 
+    my $value = substr($key,6,8); 
     push @days,$value;
 }
 
-my @unique = undef;
-my %count = undef;
-@unique = grep { ++$count{$_} < 2 } @days;
+#my %count = {};
+#my @unique =  { ++$count{$_} < 2 } @days;
+my @unique = uniq @days;
 @days = sort { $b <=> $a } @unique;
 pop @days;
 @days = @days[0,1,2,3,4,5,6] if $#days >= 7;
 
 for my $day (@days){
-    my @everday = $r->keys("qss-$day*");
+    my @everday = $r->keys("$product-$day*");
     my @field = qw/all add del mod news fast fresh other/;
     my @value;
     for my $hour (@everday){
@@ -77,8 +80,9 @@ for my $day (@days){
     $dl = $dl."[ \"$day\",";
     $tl = $tl."[ \"$day\",";   
     for my $v (@value){
+	my $digitize_v = &digitize($v); 
 	$dl = $dl."$v,";
-	$tl = $tl."{v:$v,f:\'$v\'},";
+	$tl = $tl."{v:$v,f:\'$digitize_v\'},";
     }
     $dl = $dl."],\n";
     $tl = $tl."],\n";
@@ -145,12 +149,14 @@ for my $key (@keys){
     my @field =qw/all add del mod news fast fresh other/;
     #my @value =($ALL,$ADD,$DEL,$MOD,$NEWS,$QUICK,$OTHER,$TIMELINESS);
     my $i = 0;
+    my $digitize_value=0;
     $dl = $dl."[ \"$key\",";
     $tl = $tl."[ \"$key\",";
     while($i <= $#field){
         $value = $r->hget($key,$field[$i]);
+	$digitize_value = &digitize($value);
         $dl = $dl."$value,";
-	$tl = $tl."{v:$value,f:\'$value\'},";
+	$tl = $tl."{v:$value,f:\'$digitize_value\'},";
         $i = $i + 1;
     }
     $dl = $dl."],\n";
@@ -160,7 +166,7 @@ $dldata = '[
               ["Time", "All", "Add","Del","Mod","News","Fast","Fresh","Other"],'
                 ."\n$dl".' 
             ]';
-my $htmldata='<html>
+$htmldata='<html>
 <head>
 <script type="text/javascript" src="https://www.google.com/jsapi"></script>
 <script type="text/javascript">
@@ -207,4 +213,18 @@ function drawTable() {
 print $hourhandle $htmldata;
 
 
-# by lanyun
+sub  digitize
+{
+    my $v = shift or return '0';
+    $v =~ s/(?<=^\d)(?=(\d\d\d)+$)     #处理不含小数点的情况
+        |
+        (?<=^\d\d)(?=(\d\d\d)+$)   #处理不含小数点的情况
+        |
+        (?<=\d)(?=(\d\d\d)+\.)    #处理整数部分
+        |
+        (?<=\.\d\d\d)(?!$)        #处理小数点后面第一次千分位，例子中就是.127后面的逗号
+        |
+        (?<=\G\d\d\d)(?!\.|$)     #处理小数点后第一个千分位以后的内容，或者不含小数点的情况
+        /,/gx;
+    return $v;
+}
